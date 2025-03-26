@@ -1,8 +1,13 @@
 # 🚀 ComfyUI_InfiniteYou
 An implementation of **InfiniteYou** for **ComfyUI**
 
-Native support for InfiniteYou in ComfyUI, designed by the ZenAI team.  
+Native support for [InfiniteYou](https://github.com/bytedance/InfiniteYou) in [ComfyUI](https://github.com/comfyanonymous/ComfyUI), designed by the ZenAI team.  
+
+
 **✨ Support further development by starring the project! ✨**
+
+
+![teaser](https://huggingface.co/ByteDance/InfiniteYou/blob/main/assets/teaser.jpg)
 
 ---
 
@@ -32,12 +37,11 @@ The main author has released two versions of the model: **aes_stage2** and **sim
 In addition to the Hugging Face public models, we have updated the checkpoint format to **safetensors**, which is required for ComfyUI usage.
 
 - **Hugging Face Model Link**: [ComfyUI_InfiniteYou](https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou)
-![Trump](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/workflow_example.png)
-![Musk](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/musk.png)
 ---
 
 ## 🛠️ Workflow
-
+![Trump](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/workflow_example.png)
+![Musk](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/musk.png)
 ---
 
 ## 📦 Installation
