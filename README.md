@@ -49,30 +49,31 @@ To ensure seamless integration with **ComfyUI**, we have converted the model to 
 
 ## 📦 Installation
 
-### Step 1: Download ControlNet Models
+### Step 1: Clone the Repo
 ```bash
-cd ComfyUI/models/controlnet
+cd custom_nodes
+git clone https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou
+```
+### Step 2: Install Requirements
+```bash
+cd ComfyUI_InfiniteYou
+pip install -r requirements.txt
+```
+
+### Step 3: Download ControlNet Models
+```bash
+cd ../../models/controlnet
 wget https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/aes_stage2_control_net/aes_stage2_control.safetensors
 wget https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/sim_stage1_control_net/sim_stage1_control_net.safetensors
 cd ..
 ```
-### Step 2: Download Image Projection Files
+### Step 4: Download Image Projection Files
 ```bash
 mkdir InfiniteYou
 cd InfiniteYou
 wget https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/aes_stage2_control_net/aes_stage2_img_proj.bin
 wget https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/sim_stage1_control_net/sim_stage1_img_proj.bin
 cd ../..
-```
-### Step 3: Clone the Repo
-```bash
-cd custom_nodes
-git clone https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou
-```
-### Step 4: Install Requirements
-```bash
-cd ComfyUI_InfiniteYou
-pip install -r requirements.txt
 ```
 Alternatively, you can quickly download the model using the following command:
 ```
