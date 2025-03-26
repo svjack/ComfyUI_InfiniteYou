@@ -7,10 +7,11 @@ import math
 import cv2
 import PIL.Image
 from .resampler import Resampler
-from .CrossAttentionPatch import Attn2Replace, instantid_attention
-from .utils import tensor_to_image
+from .utils import tensor_to_image, resize_and_pad_image
 
 from insightface.app import FaceAnalysis
+from insightface.utils import face_align
+from facexlib.recognition import init_recognition_model
 
 try:
     import torchvision.transforms.v2 as T
@@ -19,6 +20,13 @@ except ImportError:
 
 import torch.nn.functional as F
 from . import node_tools as node_helpers
+
+MODELS_DIR = os.path.join(folder_paths.models_dir, "InfiniteYou")
+if "InfiniteYou" not in folder_paths.folder_names_and_paths:
+    current_paths = [MODELS_DIR]
+else:
+    current_paths, _ = folder_paths.folder_names_and_paths["InfiniteYou"]
+folder_paths.folder_names_and_paths["InfiniteYou"] = (current_paths, folder_paths.supported_pt_extensions)
 
 INSIGHTFACE_DIR = os.path.join(folder_paths.models_dir, "insightface")
 
@@ -32,7 +40,7 @@ def draw_kps(image_pil, kps, color_list=[(255,0,0), (0,255,0), (0,0,255), (255,2
     limbSeq = np.array([[0, 2], [1, 2], [3, 2], [4, 2]])
     kps = np.array(kps)
 
-    h, w, _ = image_pil.shape
+    w, h = image_pil.size
     out_img = np.zeros([h, w, 3])
 
     for i in range(len(limbSeq)):
@@ -55,43 +63,40 @@ def draw_kps(image_pil, kps, color_list=[(255,0,0), (0,255,0), (0,0,255), (255,2
     out_img_pil = PIL.Image.fromarray(out_img.astype(np.uint8))
     return out_img_pil
 
-def draw_kps_new(kps, color_list=[(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255)]):
-    stickwidth = 4
-    limbSeq = np.array([[0, 2], [1, 2], [3, 2], [4, 2]])
-    kps = np.array(kps)
+def extract_arcface_bgr_embedding(in_image, landmark, arcface_model=None, in_settings=None):
+    kps = landmark
+    arc_face_image = face_align.norm_crop(in_image, landmark=np.array(kps), image_size=112)
+    arc_face_image = torch.from_numpy(arc_face_image).unsqueeze(0).permute(0,3,1,2) / 255.
+    arc_face_image = 2 * arc_face_image - 1
+    arc_face_image = arc_face_image.cuda().contiguous()
+    if arcface_model is None:
+        arcface_model = init_recognition_model('arcface', device='cuda')
+    face_emb = arcface_model(arc_face_image)[0] # [512], normalized
+    return face_emb
 
-    h = 1024
-    w = 1024
-    out_img = np.zeros([h, w, 3])
-
-    for i in range(len(limbSeq)):
-        index = limbSeq[i]
-        color = color_list[index[0]]
-
-        x = kps[index][:, 0]
-        y = kps[index][:, 1]
-        length = ((x[0] - x[1]) ** 2 + (y[0] - y[1]) ** 2) ** 0.5
-        angle = math.degrees(math.atan2(y[0] - y[1], x[0] - x[1]))
-        polygon = cv2.ellipse2Poly((int(np.mean(x)), int(np.mean(y))), (int(length / 2), stickwidth), int(angle), 0, 360, 1)
-        out_img = cv2.fillConvexPoly(out_img.copy(), polygon, color)
-    out_img = (out_img * 0.6).astype(np.uint8)
-
-    for idx_kp, kp in enumerate(kps):
-        color = color_list[idx_kp]
-        x, y = kp
-        out_img = cv2.circle(out_img.copy(), (int(x), int(y)), 10, color, -1)
-
-    out_img_pil = PIL.Image.fromarray(out_img.astype(np.uint8))
-    return out_img_pil
 
 class InfiniteYou(torch.nn.Module):
     def __init__(self, adapter_model):
         super().__init__()
-
-
         self.image_proj_model = self.init_proj()
 
         self.image_proj_model.load_state_dict(adapter_model["image_proj"])
+
+        # Load face encoder
+        self.app_640 = FaceAnalysis(name='antelopev2', 
+                                root=INSIGHTFACE_DIR, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        self.app_640.prepare(ctx_id=0, det_size=(640, 640))
+
+        self.app_320 = FaceAnalysis(name='antelopev2', 
+                                root=INSIGHTFACE_DIR, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        self.app_320.prepare(ctx_id=0, det_size=(320, 320))
+
+        self.app_160 = FaceAnalysis(name='antelopev2', 
+                                root=INSIGHTFACE_DIR, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        self.app_160.prepare(ctx_id=0, det_size=(160, 160))
+
+        self.arcface_model = init_recognition_model('arcface', device='cuda')
+        
 
     def init_proj(self):
         image_proj_model = Resampler(
@@ -105,10 +110,35 @@ class InfiniteYou(torch.nn.Module):
             ff_mult=4
         )
         return image_proj_model
+    
+    def _detect_face(self, id_image_cv2):
+        face_info = self.app_640.get(id_image_cv2)
+        if len(face_info) > 0:
+            return face_info
+        
+        face_info = self.app_320.get(id_image_cv2)
+        if len(face_info) > 0:
+            return face_info
+
+        face_info = self.app_160.get(id_image_cv2)
+        return face_info
+
+    def get_face_embed_and_landmark(self, ref_image):
+        id_image_cv2 = cv2.cvtColor(np.array(ref_image), cv2.COLOR_RGB2BGR)
+        face_info = self._detect_face(id_image_cv2)
+        if len(face_info) == 0:
+            raise ValueError('No face detected in the input ID image')
+        
+        face_info = sorted(face_info, key=lambda x:(x['bbox'][2]-x['bbox'][0])*(x['bbox'][3]-x['bbox'][1]))[-1] # only use the maximum face
+        landmark = face_info['kps']
+        id_embed = extract_arcface_bgr_embedding(id_image_cv2, landmark, self.arcface_model)
+        id_embed = id_embed.clone().unsqueeze(0).float().cuda()
+        id_embed = id_embed.reshape([1, -1, 512])
+        id_embed = id_embed.to(device='cuda', dtype=torch.bfloat16)
+        return id_embed, face_info['kps']
 
     @torch.inference_mode()
     def get_image_embeds(self, clip_embed, clip_embed_zeroed):
-        
         image_prompt_embeds = self.image_proj_model(clip_embed)
         
         uncond_image_prompt_embeds = self.image_proj_model(clip_embed_zeroed)
@@ -116,57 +146,6 @@ class InfiniteYou(torch.nn.Module):
         return image_prompt_embeds, uncond_image_prompt_embeds
 
 
-
-def extractFeatures(insightface, image, extract_kps=False):
-    face_img = tensor_to_image(image)
-    out = []
-
-    insightface.det_model.input_size = (640,640) # reset the detection size
-
-    for i in range(face_img.shape[0]):
-        for size in [(size, size) for size in range(640, 128, -64)]:
-            insightface.det_model.input_size = size # TODO: hacky but seems to be working
-            face = insightface.get(face_img[i])
-            if face:
-                face = sorted(face, key=lambda x:(x['bbox'][2]-x['bbox'][0])*(x['bbox'][3]-x['bbox'][1]))[-1]
-
-                if extract_kps:
-                    out.append(draw_kps(face_img[i], face['kps']))
-                else:
-                    out.append(torch.from_numpy(face['embedding']).unsqueeze(0))
-
-                if 640 not in size:
-                    print(f"\033[33mINFO: InsightFace detection resolution lowered to {size}.\033[0m")
-                break
-
-    if out:
-        if extract_kps:
-            out = torch.stack(T.ToTensor()(out), dim=0).permute([0,2,3,1])
-        else:
-            out = torch.stack(out, dim=0)
-    else:
-        out = None
-
-    return out
-
-class ZenInstantIDFaceAnalysis:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "provider": (["CPU", "CUDA", "ROCM", "CoreML"], ),
-            },
-        }
-
-    RETURN_TYPES = ("FACEANALYSIS",)
-    FUNCTION = "load_insight_face"
-    CATEGORY = "ZenID"
-
-    def load_insight_face(self, provider):
-        model = FaceAnalysis(name="antelopev2", root=INSIGHTFACE_DIR, providers=[provider + 'ExecutionProvider',]) # alternative to buffalo_l
-        model.prepare(ctx_id=0, det_size=(640, 640))
-
-        return (model,)
 
 def add_noise(image, factor):
     seed = int(torch.sum(image).item()) % 1000000007
@@ -186,16 +165,19 @@ class ApplyInfiniteYou:
                 "positive": ("CONDITIONING", ),
                 "negative": ("CONDITIONING", ),
                 "ref_image": ("IMAGE", ),
+                "latent_image": ("LATENT", ),
                 "adapter_file": (folder_paths.get_filename_list("InfiniteYou"), ),
-                "insightface": (["CPU", "CUDA", "ROCM", "CoreML"], ),
-                "weight": ("FLOAT", {"default": .8, "min": 0.0, "max": 5.0, "step": 0.01, }),
+                "insightface": (["CUDA", "CPU", "ROCM", "CoreML"], ),
+                "weight": ("FLOAT", {"default": 1, "min": 0.0, "max": 5.0, "step": 0.01, }),
                 "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
                 "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                "vae": ("VAE", ),
+                "fixed_face_pose": ("BOOLEAN", {"default": False, "tooltip": "Fix the face pose from reference image."}),
             },
         }
 
-    RETURN_TYPES = ("MODEL", "CONDITIONING", "CONDITIONING",)
-    RETURN_NAMES = ("MODEL", "positive", "negative", )
+    RETURN_TYPES = ("MODEL", "CONDITIONING", "CONDITIONING", "LATENT")
+    RETURN_NAMES = ("MODEL", "positive", "negative", "latent")
     FUNCTION = "apply_infinite_you"
     CATEGORY = "ComfyUI-InfiniteYou"
 
@@ -207,8 +189,7 @@ class ApplyInfiniteYou:
     
     def load_model(self, adapter_file):
         ckpt_path = folder_paths.get_full_path("InfiniteYou", adapter_file)
-
-        adapter_model_state_dict = comfy.utils.load_torch_file(ckpt_path, safe_load=True)
+        adapter_model_state_dict = torch.load(ckpt_path, map_location="cpu")
 
         model = InfiniteYou(
             adapter_model_state_dict
@@ -216,10 +197,13 @@ class ApplyInfiniteYou:
 
         return model
 
-    def apply_infinite_you(self, adapter_file, insightface, control_net, ref_image, model, positive, negative, start_at, end_at, weight=.8, ip_weight=None, cn_strength=None, noise=0.35, image_kps=None, mask=None, combine_embeds='average'):
-        
+    def apply_infinite_you(self, adapter_file, insightface, control_net, ref_image, model, positive, negative, start_at, end_at, vae, latent_image, fixed_face_pose, weight=.99,  ip_weight=None, cn_strength=None, noise=0.35, image_kps=None, mask=None, combine_embeds='average'):
+        ref_image = tensor_to_image(ref_image)
+        ref_image = PIL.Image.fromarray(ref_image.astype(np.uint8))
+        ref_image = ref_image.convert("RGB")
+
         #load resampler model
-        resampler = self.load_model(adapter_file)
+        infinteyou_model = self.load_model(adapter_file)
 
         #load insightface model
         insightface = self.load_insight_face(insightface)
@@ -234,11 +218,13 @@ class ApplyInfiniteYou:
         cn_strength = weight if cn_strength is None else cn_strength
 
         #get face embedding
-        face_embed = extractFeatures(insightface, ref_image)
+        face_embed, landmark = infinteyou_model.get_face_embed_and_landmark(ref_image)
         if face_embed is None:
             raise Exception('Reference Image: No face detected.')
 
         
+        #fixed 
+        # face_embed = torch.load("/workspace/tuan/InfiniteYou/id_embed.pt").to("cuda", torch.bfloat16)
 
         clip_embed = face_embed
         # InstantID works better with averaged embeds (TODO: needs testing)
@@ -257,16 +243,24 @@ class ApplyInfiniteYou:
             clip_embed_zeroed = torch.zeros_like(clip_embed)
 
         #apply infinite you
-        image_prompt_embeds, uncond_image_prompt_embeds = resampler.get_image_embeds(clip_embed.to(self.device, dtype=self.dtype), clip_embed_zeroed.to(self.device, dtype=self.dtype))
+        infinteyou_model = infinteyou_model.to(self.device, dtype=self.dtype)
+        image_prompt_embeds, uncond_image_prompt_embeds = infinteyou_model.get_image_embeds(clip_embed.to(self.device, dtype=self.dtype), clip_embed_zeroed.to(self.device, dtype=self.dtype))
 
         #get face kps
-        ratio = 8.0
-        dst = arcface_dst * ratio
         out = []
-        image_kps = draw_kps_new(dst)
+        height = latent_image['samples'].shape[2] * 8
+        width = latent_image['samples'].shape[3] * 8
+        if fixed_face_pose:
+            control_image = resize_and_pad_image(ref_image, (width, height))
+            image_kps = draw_kps(control_image, landmark)
+        else:
+            image_kps = np.zeros([height, width, 3])
+            image_kps = PIL.Image.fromarray(image_kps.astype(np.uint8))
+
         out.append(image_kps)
         out = torch.stack(T.ToTensor()(out), dim=0).permute([0,2,3,1])
         face_kps = out
+        
 
         # 2: do the ControlNet
         if mask is not None and len(mask.shape) < 3:
@@ -285,7 +279,7 @@ class ApplyInfiniteYou:
                 if prev_cnet in cnets:
                     c_net = cnets[prev_cnet]
                 else:
-                    c_net = control_net.copy().set_cond_hint(face_kps.movedim(-1,1), cn_strength, (start_at, end_at))
+                    c_net = control_net.copy().set_cond_hint(face_kps.movedim(-1,1), cn_strength, (start_at, end_at), vae=vae)
                     c_net.set_previous_controlnet(prev_cnet)
                     cnets[prev_cnet] = c_net
                 
@@ -302,8 +296,7 @@ class ApplyInfiniteYou:
             cond_uncond.append(c)
             is_cond = False
 
-        return(model, cond_uncond[0], cond_uncond[1], )
-
+        return(model, cond_uncond[0], cond_uncond[1], latent_image)
 
 
 NODE_CLASS_MAPPINGS = {
