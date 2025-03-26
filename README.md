@@ -16,31 +16,33 @@ Native support for [InfiniteYou](https://github.com/bytedance/InfiniteYou) in [C
 
 ---
 
-## 📜 Introduction
+## 📜 Introduction  
 
-**InfiniteYou** is a state-of-the-art (SOTA) 0-shot identity preservation model developed by ByteDance, based on **FLUX** models. This implementation brings InfiniteYou to **ComfyUI** by the **ZenAI team**.
+🚀 **InfiniteYou** is a **SOTA zero-shot identity preservation** model by **ByteDance**, built on **FLUX**. This repo brings it to **ComfyUI**, powered by **ZenAI**.  
 
-For detailed reference to the technique and the original code, check the links below:
-- **Research Paper**: [InfiniteYou Paper](https://arxiv.org/abs/2503.16418)
-- **Original Repo**: [ByteDance InfiniteYou Repo](https://github.com/bytedance/InfiniteYou)
+🔗 **References:**  
+📄 [Paper](https://arxiv.org/abs/2503.16418) | 💾 [Official Repo](https://github.com/bytedance/InfiniteYou)  
 
-Special thanks to the concept and inspiration from **ZenID**: [ZenID Repo](https://github.com/vuongminh1907/ComfyUI_ZenID), which enabled us to complete this repo earlier.
+💡 Inspired by **ZenID** 🔗 [ZenID Repo](https://github.com/vuongminh1907/ComfyUI_ZenID)  
+
+🔥 Stay tuned for updates!  
 
 ---
 
 ## 🏆 Model Zoo
 
-The main author has released two versions of the model: **aes_stage2** and **sim_stage1**, each with distinct purposes:
-- **sim_stage1**: Optimized for higher ID similarity.
-- **aes_stage2**: Optimized for better text-image alignment and aesthetics.
+The main author has released two versions of the model, each tailored for a specific purpose:  
 
-In addition to the Hugging Face public models, we have updated the checkpoint format to **safetensors**, which is required for ComfyUI usage.
+- 🔹 **sim_stage1** – Prioritizes **higher identity similarity** for more accurate face preservation.  
+- 🎨 **aes_stage2** – Focuses on **better text-image alignment** and enhanced **aesthetics**.  
 
-- **Hugging Face Model Link**: [ComfyUI_InfiniteYou](https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou)
+To ensure seamless integration with **ComfyUI**, we have converted the model to the **safetensors** format.  
+
+🔗 **Download the model on Hugging Face:**  
+👉 [ComfyUI_InfiniteYou](https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou) 
 ---
 
 ## 🛠️ Workflow
-![Trump](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/workflow_example.png)
 ![Musk](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/musk.png)
 ---
 
@@ -78,9 +80,9 @@ python ComfyUI/custom_nodes/ComfyUI_InfiniteYou/downloadmodel.py
 
 ## 🧭 Usage
 
-- If you're using **aes\_stage2**, make sure to load both the **ControlNet model** (`aes_stage2_control.safetensors`) and the **Image Projection** (`aes_stage2_img_proj.bin`) at the same time
+🔹 For `aes_stage2`: Try file `aes_stages2.json` in `workflows`
+🔹 For `sim_stage1`: Try file `sim_stages1.json` in `workflows`
 
-- Conversely, if you're using **sim_stage1**, select the corresponding models.
 
 ## 📞 Contact for Work 🌟
 This implementation of InfiniteYou is brought to you by the ZenAI Team.
