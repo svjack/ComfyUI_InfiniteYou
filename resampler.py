@@ -77,13 +77,13 @@ class PerceiverAttention(nn.Module):
 class Resampler(nn.Module):
     def __init__(
         self,
-        dim=1024,
-        depth=8,
+        dim=1280,
+        depth=4,
         dim_head=64,
-        heads=16,
+        heads=20,
         num_queries=8,
-        embedding_dim=768,
-        output_dim=1024,
+        embedding_dim=512,
+        output_dim=4096,
         ff_mult=4,
     ):
         super().__init__()
@@ -118,3 +118,22 @@ class Resampler(nn.Module):
             
         latents = self.proj_out(latents)
         return self.norm_out(latents)
+
+
+if __name__ == "__main__":
+    x = torch.load("/workspace/tuan/InfiniteYou/id_embed.pt").to("cuda", torch.bfloat16)
+    print(x.shape)
+    resampler = Resampler(
+                dim=1280,
+                depth=4,
+                dim_head=64,
+                heads=20,
+                num_queries=8,
+                embedding_dim=512,
+                output_dim=4096,
+                ff_mult=4,
+            )
+    resampler = resampler.to("cuda", torch.bfloat16)
+    resampler.eval()
+    x = resampler(x)
+    print(x.shape)
