@@ -36,7 +36,9 @@ The main author has released two versions of the model, each tailored for a spec
 - 🔹 **sim_stage1** – Prioritizes **higher identity similarity** for more accurate face preservation.  
 - 🎨 **aes_stage2** – Focuses on **better text-image alignment** and enhanced **aesthetics**.  
 
-To ensure seamless integration with **ComfyUI**, we have converted the model to the **safetensors** format.  
+To ensure seamless integration with **ComfyUI**, we have converted the model to the **safetensors** format. 
+
+
 **Download the model on Hugging Face:**  
 👉 [ComfyUI_InfiniteYou](https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou) 
 ---
