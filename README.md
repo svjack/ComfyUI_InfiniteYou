@@ -37,8 +37,7 @@ The main author has released two versions of the model, each tailored for a spec
 - 🎨 **aes_stage2** – Focuses on **better text-image alignment** and enhanced **aesthetics**.  
 
 To ensure seamless integration with **ComfyUI**, we have converted the model to the **safetensors** format.  
-
-🔗 **Download the model on Hugging Face:**  
+**Download the model on Hugging Face:**  
 👉 [ComfyUI_InfiniteYou](https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou) 
 ---
 
@@ -81,6 +80,7 @@ python ComfyUI/custom_nodes/ComfyUI_InfiniteYou/downloadmodel.py
 ## 🧭 Usage
 
 🔹 For `aes_stage2`: Try file `aes_stages2.json` in `workflows`
+
 🔹 For `sim_stage1`: Try file `sim_stages1.json` in `workflows`
 
 
