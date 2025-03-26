@@ -7,7 +7,7 @@ Native support for [InfiniteYou](https://github.com/bytedance/InfiniteYou) in [C
 **✨ Support further development by starring the project! ✨**
 
 
-![teaser](https://huggingface.co/ByteDance/InfiniteYou/blob/main/assets/teaser.jpg)
+![teaser](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/teaser.jpg)
 
 ---
 
