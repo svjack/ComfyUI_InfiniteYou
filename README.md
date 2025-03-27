@@ -12,6 +12,7 @@ Native support for [InfiniteYou](https://github.com/bytedance/InfiniteYou) in [C
 ---
 
 ## 🔥 News
+- **[03/2025]** 🔥 Integrate Face Combine feature to predict future children
 - **[03/2025]** 🔥 Code updated and released as the first version.
 
 ---
@@ -44,7 +45,11 @@ To ensure seamless integration with **ComfyUI**, we have converted the model to 
 ---
 
 ## 🛠️ Workflow
+### **Zero-Shot Task**
 ![Musk](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/musk.png)
+
+### **FaceCombine Task**
+![Children](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/face_combine_workflow.png)
 ---
 
 ## 📦 Installation
@@ -92,6 +97,10 @@ pip install -r ComfyUI_InfiniteYou/requirements.txt
 🔹 For `aes_stage2`: Try file `aes_stages2.json` in `workflows`
 
 🔹 For `sim_stage1`: Try file `sim_stages1.json` in `workflows`
+
+Predict your future children
+🔹 For `Face Combine`: Try file `face_combine.json` in `workflows`
+
 
 
 ## 📞 Contact for Work 🌟

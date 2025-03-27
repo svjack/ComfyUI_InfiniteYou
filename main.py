@@ -220,10 +220,7 @@ class ApplyInfiniteYou:
         face_embed, landmark = infinteyou_model.get_face_embed_and_landmark(ref_image)
         if face_embed is None:
             raise Exception('Reference Image: No face detected.')
-
         
-        #fixed 
-        # face_embed = torch.load("/workspace/tuan/InfiniteYou/id_embed.pt").to("cuda", torch.bfloat16)
 
         clip_embed = face_embed
         # InstantID works better with averaged embeds (TODO: needs testing)
@@ -296,12 +293,167 @@ class ApplyInfiniteYou:
             is_cond = False
 
         return(model, cond_uncond[0], cond_uncond[1], latent_image)
+    
+
+class FaceCombine:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "control_net": ("CONTROL_NET", ),
+                "model": ("MODEL", ),
+                "positive": ("CONDITIONING", ),
+                "negative": ("CONDITIONING", ),
+                "ref_image_1": ("IMAGE", ),
+                "ref_image_2": ("IMAGE", ),
+                "latent_image": ("LATENT", ),
+                "adapter_file": (folder_paths.get_filename_list("InfiniteYou"), ),
+                "insightface": (["CUDA", "CPU", "ROCM", "CoreML"], ),
+                "weight": ("FLOAT", {"default": 1, "min": 0.0, "max": 5.0, "step": 0.01, }),
+                "balance": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01, }),
+                "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                "vae": ("VAE", ),
+                "fixed_face_pose": ("BOOLEAN", {"default": False, "tooltip": "Fix the face pose from reference image."}),
+            },
+        }
+
+    RETURN_TYPES = ("MODEL", "CONDITIONING", "CONDITIONING", "LATENT")
+    RETURN_NAMES = ("MODEL", "positive", "negative", "latent")
+    FUNCTION = "apply_face_combine"
+    CATEGORY = "ComfyUI-InfiniteYou"
+
+    def load_insight_face(self, provider):
+        model = FaceAnalysis(name="antelopev2", root=INSIGHTFACE_DIR, providers=[provider + 'ExecutionProvider',]) # alternative to buffalo_l
+        model.prepare(ctx_id=0, det_size=(640, 640))
+
+        return model
+    
+    def load_model(self, adapter_file):
+        ckpt_path = folder_paths.get_full_path("InfiniteYou", adapter_file)
+        adapter_model_state_dict = torch.load(ckpt_path, map_location="cpu")
+
+        model = InfiniteYou(
+            adapter_model_state_dict
+        )
+
+        return model
+
+    def apply_face_combine(self, adapter_file, insightface, control_net, ref_image_1, ref_image_2, model, positive, negative, start_at, end_at, vae, latent_image, fixed_face_pose, balance = 0.5, weight=.99,  ip_weight=None, cn_strength=None, noise=0.35, image_kps=None, mask=None, combine_embeds='average'):
+        ref_image_1 = tensor_to_image(ref_image_1)
+        ref_image_1 = PIL.Image.fromarray(ref_image_1.astype(np.uint8))
+        ref_image_1 = ref_image_1.convert("RGB")
+
+        ref_image_2 = tensor_to_image(ref_image_2)
+        ref_image_2 = PIL.Image.fromarray(ref_image_2.astype(np.uint8))
+        ref_image_2 = ref_image_2.convert("RGB")
+
+        #load resampler model
+        infinteyou_model = self.load_model(adapter_file)
+
+        #load insightface model
+        insightface = self.load_insight_face(insightface)
+
+        dtype = comfy.model_management.unet_dtype()
+        if dtype not in [torch.float32, torch.float16, torch.bfloat16]:
+            dtype = torch.float16 if comfy.model_management.should_use_fp16() else torch.float32
+        
+        self.dtype = dtype
+        self.device = comfy.model_management.get_torch_device()
+
+        cn_strength = weight if cn_strength is None else cn_strength
+
+        #get face embedding
+        face_embed_1, landmark_1 = infinteyou_model.get_face_embed_and_landmark(ref_image_1)
+        if face_embed_1 is None:
+            raise Exception('Reference Image: No face detected.')
+
+        face_embed_2, landmark_2 = infinteyou_model.get_face_embed_and_landmark(ref_image_2)
+        if face_embed_2 is None:
+            raise Exception('Reference Image: No face detected.')
+
+        #copied from https://github.com/vuongminh1907/ComfyUI_ZenID/blob/main/ZenID.py#L596
+        face_embed = face_embed_1 * balance + face_embed_2 * (1 - balance)
+
+        clip_embed = face_embed
+        # InstantID works better with averaged embeds (TODO: needs testing)
+        if clip_embed.shape[0] > 1:
+            if combine_embeds == 'average':
+                clip_embed = torch.mean(clip_embed, dim=0).unsqueeze(0)
+            elif combine_embeds == 'norm average':
+                clip_embed = torch.mean(clip_embed / torch.norm(clip_embed, dim=0, keepdim=True), dim=0).unsqueeze(0)
+
+        if noise > 0:
+            seed = int(torch.sum(clip_embed).item()) % 1000000007
+            torch.manual_seed(seed)
+            clip_embed_zeroed = noise * torch.rand_like(clip_embed)
+            #clip_embed_zeroed = add_noise(clip_embed, noise)
+        else:
+            clip_embed_zeroed = torch.zeros_like(clip_embed)
+
+        #apply infinite you
+        infinteyou_model = infinteyou_model.to(self.device, dtype=self.dtype)
+        image_prompt_embeds, uncond_image_prompt_embeds = infinteyou_model.get_image_embeds(clip_embed.to(self.device, dtype=self.dtype), clip_embed_zeroed.to(self.device, dtype=self.dtype))
+
+        #get face kps
+        out = []
+        height = latent_image['samples'].shape[2] * 8
+        width = latent_image['samples'].shape[3] * 8
+        if fixed_face_pose:
+            control_image = resize_and_pad_image(ref_image_1, (width, height))
+            image_kps = draw_kps(control_image, landmark_1)
+        else:
+            image_kps = np.zeros([height, width, 3])
+            image_kps = PIL.Image.fromarray(image_kps.astype(np.uint8))
+
+        out.append(image_kps)
+        out = torch.stack(T.ToTensor()(out), dim=0).permute([0,2,3,1])
+        face_kps = out
+        
+
+        # 2: do the ControlNet
+        if mask is not None and len(mask.shape) < 3:
+            mask = mask.unsqueeze(0)
+
+        cnets = {}
+        cond_uncond = []
+
+        is_cond = True
+        for conditioning in [positive, negative]:
+            c = []
+            for t in conditioning:
+                d = t[1].copy()
+
+                prev_cnet = d.get('control', None)
+                if prev_cnet in cnets:
+                    c_net = cnets[prev_cnet]
+                else:
+                    c_net = control_net.copy().set_cond_hint(face_kps.movedim(-1,1), cn_strength, (start_at, end_at), vae=vae)
+                    c_net.set_previous_controlnet(prev_cnet)
+                    cnets[prev_cnet] = c_net
+                
+                d['control'] = c_net
+                d['control_apply_to_uncond'] = False
+                d['cross_attn_controlnet'] = image_prompt_embeds.to(comfy.model_management.intermediate_device(), dtype=c_net.cond_hint_original.dtype) if is_cond else uncond_image_prompt_embeds.to(comfy.model_management.intermediate_device(), dtype=c_net.cond_hint_original.dtype)
+
+                if mask is not None and is_cond:
+                    d['mask'] = mask
+                    d['set_area_to_bounds'] = False
+
+                n = [t[0], d]
+                c.append(n)
+            cond_uncond.append(c)
+            is_cond = False
+
+        return(model, cond_uncond[0], cond_uncond[1], latent_image)
 
 
 NODE_CLASS_MAPPINGS = {
-    "InfiniteYouApply": ApplyInfiniteYou,
+    "InfiniteYouApply": ApplyInfiniteYou,   
+    "FaceCombine": FaceCombine,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "InfiniteYouApply": "InfiniteYou Apply",
+    "FaceCombine": "Face Combine",
 }
