@@ -81,7 +81,10 @@ The InsightFace model is **antelopev2** (not the classic buffalo_l). Download th
 Alternatively, you can quickly download all **models** using the following command:
 ```
 # make sure you are in the ComfyUI directory
-python custom_nodes/ComfyUI_InfiniteYou/downloadmodel.py
+cd custom_nodes/
+git clone https://github.com/ZenAI-Vietnam/ComfyUI_InfiniteYou
+python ComfyUI_InfiniteYou/downloadmodel.py
+pip install -r ComfyUI_InfiniteYou/requirements.txt
 ```
 
 ## 🧭 Usage
