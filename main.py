@@ -19,7 +19,6 @@ except ImportError:
     import torchvision.transforms as T
 
 import torch.nn.functional as F
-from . import node_tools as node_helpers
 
 MODELS_DIR = os.path.join(folder_paths.models_dir, "InfiniteYou")
 if "InfiniteYou" not in folder_paths.folder_names_and_paths:

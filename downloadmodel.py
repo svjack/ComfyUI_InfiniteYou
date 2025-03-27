@@ -12,8 +12,10 @@ def download_file(url, dest_folder):
     else:
         print(f"File {dest_path} already exists, skipping download.")
 
+print("--------MAKE SURE YOU ARE IN COMFYUI/ DIRECTORY-----------")
+
 # Step 1: Download ControlNet models
-controlnet_folder = "ComfyUI/models/controlnet"
+controlnet_folder = "models/controlnet"
 controlnet_urls = [
     "https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/aes_stage2_control_net/aes_stage2_control.safetensors",
     "https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/sim_stage1_control_net/sim_stage1_control_net.safetensors"
@@ -34,13 +36,13 @@ for url in infiniteyou_urls:
 
 
 # Step 3: Download InsightFace model
-os.makedirs("ComfyUI/models/insightface/", exist_ok=True)
+os.makedirs("models/insightface/", exist_ok=True)
 
 snapshot_download(
     repo_id="vuongminhkhoi4/antelopev2",
     cache_dir="models",
     repo_type="model",
-    local_dir="ComfyUI/models/insightface",
+    local_dir="models/insightface",
 )
 
 if os.path.exists("ComfyUI/models/insightface") and os.path.isdir("ComfyUI/models/insightface"):

@@ -75,9 +75,13 @@ wget https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/aes_
 wget https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/sim_stage1_control_net/sim_stage1_img_proj.bin
 cd ../..
 ```
-Alternatively, you can quickly download the model using the following command:
+### Step 5: Download InsightFace model
+The InsightFace model is **antelopev2** (not the classic buffalo_l). Download the models (for example from [here](https://drive.google.com/file/d/18wEUfMNohBJ4K3Ly5wpTejPfDzp-8fI8/view?usp=sharing) or [here](https://huggingface.co/MonsterMMORPG/tools/tree/main)), unzip and place them in the `ComfyUI/models/insightface/models/antelopev2` directory.
+
+Alternatively, you can quickly download all **models** using the following command:
 ```
-python ComfyUI/custom_nodes/ComfyUI_InfiniteYou/downloadmodel.py
+# make sure you are in the ComfyUI directory
+python custom_nodes/ComfyUI_InfiniteYou/downloadmodel.py
 ```
 
 ## 🧭 Usage
