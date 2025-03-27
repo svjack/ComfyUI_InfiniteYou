@@ -17,7 +17,7 @@ hf_hub_download(
     repo_id="vuongminhkhoi4/ComfyUI_InfiniteYou", subfolder="aes_stage2_control_net", filename="aes_stage2_control.safetensors", local_dir="../models/controlnet"
 )
 hf_hub_download(
-    repo_id="vuongminhkhoi4/ComfyUI_InfiniteYou", subfolder="sim_stage1_control_net", filename="sim_stage1_control.safetensors", local_dir="../models/controlnet"
+    repo_id="vuongminhkhoi4/ComfyUI_InfiniteYou", subfolder="sim_stage1_control_net", filename="sim_stage1_control_net.safetensors", local_dir="../models/controlnet"
 )
 
 #Download InsightFace model
