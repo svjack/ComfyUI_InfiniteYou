@@ -110,4 +110,16 @@ This implementation of InfiniteYou is brought to you by the ZenAI Team.
 
 If you need more polished and enhanced version, please contact us through:  
 - 📱 **Facebook Page**: [ZenAI](https://web.facebook.com/zenai.vn)  
-- ☎️ **Phone**: 0971912713 Miss. Chi  
+- ☎️ **Phone**: 0971912713 Miss. Chi 
+
+## 📖 Citation
+
+```bibtex
+@article{jiang2025infiniteyou,
+  title={{InfiniteYou}: Flexible Photo Recrafting While Preserving Your Identity},
+  author={Jiang, Liming and Yan, Qing and Jia, Yumin and Liu, Zichuan and Kang, Hao and Lu, Xin},
+  journal={arXiv preprint},
+  volume={arXiv:2503.16418},
+  year={2025}
+}
+```
