@@ -488,7 +488,7 @@ class SwapFace:
         prompt = " "
         neg_prompt = "ugly, blurry"
         positive = self.encode_prompt(clip, prompt)
-        positive = node_helpers.conditioning_set_values(positive, {"guidance": float(2.5)})
+        positive = node_helpers.conditioning_set_values(positive, {"guidance": float(1.5)})
         negative = self.encode_prompt(clip, neg_prompt)
 
         tensor_image = tensor_image.to(self.device, dtype=self.dtype)
@@ -658,6 +658,6 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "InfiniteYouApply": "InfiniteYou Apply",
-    "FaceCombine": "Face Combine",
+    "FaceCombine": "Face Combine (InfiniteYou)",
     "FaceSwap_InfiniteYou": "Face Swap (InfiniteYou)",
 }

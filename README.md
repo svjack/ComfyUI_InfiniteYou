@@ -12,6 +12,7 @@ Native support for [InfiniteYou](https://github.com/bytedance/InfiniteYou) in [C
 ---
 
 ## 🔥 News
+- **[03/2025]** 🔥 Integrate Face Swap feature
 - **[03/2025]** 🔥 Integrate Face Combine feature to predict future children
 - **[03/2025]** 🔥 Code updated and released as the first version.
 
@@ -50,6 +51,9 @@ To ensure seamless integration with **ComfyUI**, we have converted the model to 
 
 ### **FaceCombine Task**
 ![Children](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/face_combine_workflow.png)
+
+### **FaceSwap Task**
+![FaceSwap](https://github.com/ZenAI-Comfy/ComfyUI_InfiniteYou/blob/main/assets/face_swap.jpg)
 ---
 
 ## 📦 Installation
@@ -66,6 +70,7 @@ pip install -r requirements.txt
 ```
 
 ### Step 3: Download ControlNet Models
+Place the ControlNet Models in the `ComfyUI/models/controlnet` directory.
 ```bash
 cd ../../models/controlnet
 wget https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/aes_stage2_control_net/aes_stage2_control.safetensors
@@ -73,6 +78,7 @@ wget https://huggingface.co/vuongminhkhoi4/ComfyUI_InfiniteYou/resolve/main/sim_
 cd ..
 ```
 ### Step 4: Download Image Projection Files
+Place the Image Projection files in the `ComfyUI/models/InfiniteYou` directory.
 ```bash
 mkdir InfiniteYou
 cd InfiniteYou
