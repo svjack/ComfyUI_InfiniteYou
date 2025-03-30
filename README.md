@@ -104,8 +104,8 @@ pip install -r ComfyUI_InfiniteYou/requirements.txt
 
 🔹 For `sim_stage1`: Try file `sim_stages1.json` in `workflows`
 
-Predict your future children
-🔹 For `Face Combine`: Try file `face_combine.json` in `workflows`
+🔹 For `Face Combine` to predict your future children: Try file `face_combine.json` in `workflows`
+🔹 For `Face Swap` : Try file `face_swap.json` in `workflows`
 
 
 
